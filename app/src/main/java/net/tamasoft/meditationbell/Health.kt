@@ -43,7 +43,8 @@ object Health {
                 "sitting-${start.toEpochMilli()}", 1L,
             ),
             MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MEDITATION,
-            null, null,
+            // Google Health shows a missing title as the word "null".
+            "Meditation", null,
         )
         return try {
             HealthConnectClient.getOrCreate(c).insertRecords(listOf(record))
