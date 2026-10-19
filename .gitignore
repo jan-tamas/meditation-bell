@@ -1,3 +1,8 @@
 *.wav
 .venv/
 __pycache__/
+.gradle/
+build/
+local.properties
+*.jks
+.idea/

@@ -1,0 +1,67 @@
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
+}
+
+// CI passes these; a local build gets the defaults.
+val versionCodeProp = (findProperty("versionCode") as String?)?.toInt() ?: 1
+val versionNameProp = (findProperty("versionName") as String?) ?: "0.1-dev"
+
+android {
+    namespace = "net.tamasoft.meditationbell"
+    compileSdk = 36
+
+    defaultConfig {
+        applicationId = "net.tamasoft.meditationbell"
+        minSdk = 28
+        targetSdk = 36
+        versionCode = versionCodeProp
+        versionName = versionNameProp
+    }
+
+    // The release key lives only in GitHub's secrets; see .github/workflows/build.yml.
+    val keystore = System.getenv("KEYSTORE_FILE")
+    signingConfigs {
+        if (keystore != null) {
+            create("release") {
+                storeFile = file(keystore)
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            if (keystore != null) signingConfig = signingConfigs.getByName("release")
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    buildFeatures { compose = true }
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+    }
+}
+
+kotlin {
+    jvmToolchain(17)
+}
+
+dependencies {
+    val bom = platform("androidx.compose:compose-bom:2025.10.01")
+    implementation(bom)
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.activity:activity-compose:1.11.0")
+    implementation("androidx.core:core-ktx:1.17.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.4")
+    implementation("androidx.health.connect:connect-client:1.1.0")
+}
