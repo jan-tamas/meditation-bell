@@ -1,6 +1,6 @@
 # Meditation bell
 
-A meditation timer for Android that rings bells and saves each sitting to
+"Meditation bell" is a meditation timer for Android that rings bells and saves each sitting to
 Health Connect. Nothing is built yet. The design is in Jan's vault:
 `wiki/analyses/2026-10-12-meditation-bell-app-to-health-connect.md`.
 
