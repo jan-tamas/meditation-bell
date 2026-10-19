@@ -1,8 +1,28 @@
 # Meditation bell
 
 "Meditation bell" is a meditation timer for Android that rings bells and saves each sitting to
-Health Connect. Nothing is built yet. The design is in Jan's vault:
+Health Connect. The design is in Jan's vault:
 `wiki/analyses/2026-10-12-meditation-bell-app-to-health-connect.md`.
+
+## What it does
+
+- One screen: sitting length (default 1 h 30), an interval bell (default the
+  medium bowl at 45 minutes), a closing bell (default the large bowl), and Do
+  Not Disturb while sitting (on by default, can be switched off).
+- No bell at the start, and nothing shown at the end: no count, no total.
+- Each bell is an alarm-clock alarm, the one kind Android never delays, and
+  plays as an alarm sound, so silent mode does not mute it. Do Not Disturb is
+  set to "alarms only" and put back as it was when the sitting ends.
+- Each sitting is saved to Health Connect as one meditation session (start
+  and end; nothing is read). Ending early saves the real end. A sitting
+  Health Connect refuses is kept and retried when the app is next opened.
+
+## Building
+
+GitHub Actions builds it (`.github/workflows/build.yml`): a test copy on every
+push to `main`, and a signed release on a tag like `v0.1`, which is what
+Obtainium installs. Locally: `gradle assembleDebug` with JDK 17 and the
+Android SDK.
 
 ## Bells
 
