@@ -31,6 +31,9 @@ class SittingService : Service() {
         const val BELL_INTERVAL = "bell-interval"
         const val BELL_END = "bell-end"
         const val STOP = "stop"
+        const val SAVE = "save"
+        const val REFRESH = "refresh"
+        const val PAUSE_LIMIT = "pause-limit"
         const val START_MS = "start-ms"
         const val END_MS = "end-ms"
         private const val CHANNEL = "sitting"
@@ -51,13 +54,33 @@ class SittingService : Service() {
         // Every start must promise the foreground at once, even one that ends straight away.
         goForeground()
         val session = Sitting.current(this)
+        val clock = session?.clock
+        val now = System.currentTimeMillis()
         when (intent?.action) {
-            BEGIN -> if (session == null) stopIfIdle()
-            BELL_INTERVAL -> if (session != null) ring(session.intervalBell) else stopIfIdle()
-            BELL_END -> Sitting.end(this)?.let {
-                save(it.startMs, it.endMs)
-                ring(it.endBell)
-            } ?: stopIfIdle()
+            BEGIN, REFRESH -> if (session == null) stopIfIdle()
+            // An alarm from before a pause is cancelled, but one already on its way is ignored.
+            BELL_INTERVAL -> if (session != null && !clock!!.paused &&
+                clock.elapsed(now) >= clock.intervalOffsetMs - 60_000
+            ) ring(session.intervalBell) else stopIfIdle()
+            BELL_END -> when {
+                session == null -> stopIfIdle()
+                clock!!.paused || clock.remaining(now) > 60_000 -> Unit
+                else -> {
+                    Sitting.end(this)
+                    clock.finalStretch(clock.endAt)?.let { save(it.startMs, it.endMs) }
+                    ring(session.endBell)
+                }
+            }
+            // A pause left for an hour: end the sitting. Its last stretch was saved at the pause.
+            PAUSE_LIMIT -> {
+                if (clock != null && clock.pauseExpired(now)) Sitting.end(this)
+                stopIfIdle()
+            }
+            // A stretch the screen has just closed by pausing.
+            SAVE -> {
+                val start = intent.getLongExtra(START_MS, 0)
+                if (start != 0L) save(start, intent.getLongExtra(END_MS, start))
+            }
             // The screen has already ended the sitting, so it says when.
             STOP -> {
                 val start = intent.getLongExtra(START_MS, 0)
@@ -109,8 +132,10 @@ class SittingService : Service() {
             }
         )
         val session = Sitting.current(this)
-        val text = if (session != null) {
-            "Until " + DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(session.endMs))
+        val text = if (session != null && session.clock.paused) {
+            "Paused"
+        } else if (session != null) {
+            "Until " + DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(session.clock.endAt))
         } else {
             "Closing bell"
         }

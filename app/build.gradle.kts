@@ -64,4 +64,5 @@ dependencies {
     implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.4")
     implementation("androidx.health.connect:connect-client:1.1.0")
+    testImplementation("junit:junit:4.13.2")
 }

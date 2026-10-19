@@ -10,6 +10,11 @@ Health Connect. The design is in Jan's vault:
   medium bowl at 45 minutes), a closing bell (default the large bowl), and Do
   Not Disturb while sitting (on by default, can be switched off).
 - No bell at the start, and nothing shown at the end: no count, no total.
+- Pause, then resume or end. Paused time does not count: the bells still to
+  come move later by the length of the pause, and no bell rings on resume. Do
+  Not Disturb stays on while paused. A pause left for an hour ends the sitting.
+  Each unbroken stretch of sitting is saved as its own session, so the minutes
+  in Health Connect are the minutes sat.
 - Each bell is an alarm-clock alarm, the one kind Android never delays, and
   plays as an alarm sound, so silent mode does not mute it. Do Not Disturb is
   set to "alarms only" and put back as it was when the sitting ends.
@@ -22,7 +27,7 @@ Health Connect. The design is in Jan's vault:
 GitHub Actions builds it (`.github/workflows/build.yml`): a test copy on every
 push to `main`, and a signed release on a tag like `v0.1`, which is what
 Obtainium installs. Locally: `gradle assembleDebug` with JDK 17 and the
-Android SDK.
+Android SDK. The timing (`Clock.kt`) has unit tests, run on every build.
 
 ## Bells
 

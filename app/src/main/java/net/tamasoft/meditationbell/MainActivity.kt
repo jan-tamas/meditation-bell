@@ -78,13 +78,23 @@ class MainActivity : ComponentActivity() {
 
     /**
      * A sitting whose closing bell never came (the phone restarted, say) is
-     * closed at its planned end and saved, so nothing stays silenced.
+     * closed at its planned end and saved, and one paused for longer than an
+     * hour is closed too, so nothing stays silenced. A paused sitting is never
+     * "overdue": its end moves with the pause.
      */
     private suspend fun closeOverdueSitting() {
         val s = Sitting.current(this) ?: return
-        if (System.currentTimeMillis() < s.endMs + 120_000) return
-        Sitting.end(this)
-        Health.saveOrQueue(this, Instant.ofEpochMilli(s.startMs), Instant.ofEpochMilli(s.endMs))
+        val now = System.currentTimeMillis()
+        val clock = s.clock
+        when {
+            clock.paused -> if (clock.pauseExpired(now)) Sitting.end(this)
+            now >= clock.endAt + 120_000 -> {
+                Sitting.end(this)
+                clock.finalStretch(clock.endAt)?.let {
+                    Health.saveOrQueue(this, Instant.ofEpochMilli(it.startMs), Instant.ofEpochMilli(it.endMs))
+                }
+            }
+        }
     }
 }
 
@@ -103,28 +113,57 @@ private fun Screen(resumed: Int) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Box(Modifier.safeDrawingPadding().padding(24.dp)) {
             val s = session
-            if (s != null) Running(s, now) { session = null } else Setup(resumed) { session = Sitting.current(context) }
+            if (s != null) Running(s, now) { session = Sitting.current(context) }
+            else Setup(resumed) { session = Sitting.current(context) }
         }
     }
 }
 
 @Composable
-private fun Running(s: Session, now: Long, onStopped: () -> Unit) {
+private fun Running(s: Session, now: Long, onChanged: () -> Unit) {
     val context = LocalContext.current
     var confirm by remember { mutableStateOf(false) }
-    val left = ((s.endMs - now) / 1000).coerceAtLeast(0)
-    val clock = DateFormat.getTimeInstance(DateFormat.SHORT)
+    val c = s.clock
+    val left = c.remaining(now) / 1000
+    val format = DateFormat.getTimeInstance(DateFormat.SHORT)
+    fun tellService(action: String, stretch: Stretch? = null) {
+        val intent = SittingService.intent(context, action)
+        if (stretch != null) {
+            intent.putExtra(SittingService.START_MS, stretch.startMs)
+                .putExtra(SittingService.END_MS, stretch.endMs)
+        }
+        context.startForegroundService(intent)
+    }
     Column(
         Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text("%d:%02d".format(left / 60, left % 60), fontSize = 56.sp, color = MaterialTheme.colorScheme.primary)
-        Text("until " + clock.format(Date(s.endMs)), Modifier.padding(top = 8.dp))
-        if (s.intervalMs != 0L && s.intervalMs > now) {
-            Text("bell at " + clock.format(Date(s.intervalMs)), Modifier.padding(top = 4.dp))
+        if (c.paused) {
+            Text("Paused", Modifier.padding(top = 8.dp))
+        } else {
+            Text("until " + format.format(Date(c.endAt)), Modifier.padding(top = 8.dp))
+            if (c.intervalPending(now)) {
+                Text("bell at " + format.format(Date(c.intervalAt)), Modifier.padding(top = 4.dp))
+            }
         }
         Spacer(Modifier.height(48.dp))
+        if (c.paused) {
+            Button(onClick = {
+                Sitting.resume(context)
+                tellService(SittingService.REFRESH)
+                onChanged()
+            }) { Text("Resume") }
+        } else {
+            OutlinedButton(onClick = {
+                // The stretch that just ended is saved now, as its own session.
+                val stretch = Sitting.pause(context)
+                tellService(if (stretch != null) SittingService.SAVE else SittingService.REFRESH, stretch)
+                onChanged()
+            }) { Text("Pause") }
+        }
+        Spacer(Modifier.height(12.dp))
         OutlinedButton(onClick = { confirm = true }) { Text("End sitting") }
     }
     if (confirm) {
@@ -136,13 +175,10 @@ private fun Running(s: Session, now: Long, onStopped: () -> Unit) {
                 TextButton(onClick = {
                     confirm = false
                     Sitting.end(context)?.let {
-                        context.startForegroundService(
-                            SittingService.intent(context, SittingService.STOP)
-                                .putExtra(SittingService.START_MS, it.startMs)
-                                .putExtra(SittingService.END_MS, System.currentTimeMillis())
-                        )
+                        // During a pause the last stretch is already saved.
+                        tellService(SittingService.STOP, it.clock.finalStretch(System.currentTimeMillis()))
                     }
-                    onStopped()
+                    onChanged()
                 }) { Text("End") }
             },
             dismissButton = { TextButton(onClick = { confirm = false }) { Text("Keep sitting") } },
