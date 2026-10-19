@@ -188,15 +188,15 @@ private fun Setup(resumed: Int, onStarted: () -> Unit) {
         Spacer(Modifier.height(24.dp))
 
         Stepper("Length", duration(settings.totalMin),
-            onMinus = { update(settings.copy(totalMin = (settings.totalMin - 5).coerceAtLeast(5))) },
-            onPlus = { update(settings.copy(totalMin = (settings.totalMin + 5).coerceAtMost(300))) })
+            onMinus = { update(settings.copy(totalMin = step(settings.totalMin, -1).coerceAtLeast(1))) },
+            onPlus = { update(settings.copy(totalMin = step(settings.totalMin, +1).coerceAtMost(300))) })
         HorizontalDivider(Modifier.padding(vertical = 12.dp))
 
         Toggle("Interval bell", settings.intervalOn) { update(settings.copy(intervalOn = it)) }
         if (settings.intervalOn) {
             Stepper("At", duration(settings.intervalMin),
-                onMinus = { update(settings.copy(intervalMin = (settings.intervalMin - 5).coerceAtLeast(5))) },
-                onPlus = { update(settings.copy(intervalMin = (settings.intervalMin + 5).coerceAtMost(295))) })
+                onMinus = { update(settings.copy(intervalMin = step(settings.intervalMin, -1).coerceAtLeast(1))) },
+                onPlus = { update(settings.copy(intervalMin = step(settings.intervalMin, +1).coerceAtMost(299))) })
             BellPicker(settings.intervalBell, { update(settings.copy(intervalBell = it)) }, ::listen)
             if (settings.intervalMin >= settings.totalMin) {
                 Text("Comes after the end, so it will not ring.", color = MaterialTheme.colorScheme.error)
@@ -273,6 +273,14 @@ private fun BellPicker(bell: Bell, onPick: (Bell) -> Unit, onListen: (Bell) -> U
         }
         TextButton(onClick = { onListen(bell) }) { Text("Listen") }
     }
+}
+
+/** One minute at a time below 10 minutes, so a short test sitting can be set; five above. */
+private fun step(min: Int, dir: Int): Int = when {
+    dir > 0 && min < 10 -> min + 1
+    dir < 0 && min <= 10 -> min - 1
+    dir > 0 -> (min / 5 + 1) * 5
+    else -> (min - 1) / 5 * 5
 }
 
 private fun duration(min: Int) = when {
