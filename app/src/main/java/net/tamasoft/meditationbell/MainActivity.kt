@@ -202,6 +202,8 @@ private fun Setup(resumed: Int, onStarted: () -> Unit) {
     val askHealth = rememberLauncherForActivityResult(
         PermissionController.createRequestPermissionResultContract()
     ) { granted -> healthAllowed = Health.WRITE in granted }
+    var adding by remember { mutableStateOf(false) }
+    var added by remember { mutableStateOf<String?>(null) }
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     LaunchedEffect(resumed) {
         dndAllowed = Sitting.dndAllowed(context)
@@ -257,7 +259,17 @@ private fun Setup(resumed: Int, onStarted: () -> Unit) {
             !healthAllowed -> TextButton(onClick = { askHealth.launch(setOf(Health.WRITE)) }) {
                 Text("Allow saving sittings to Health Connect")
             }
-            else -> Text("Sittings are saved to Health Connect.")
+            else -> {
+                Text("Sittings are saved to Health Connect.")
+                TextButton(onClick = { adding = true }) { Text("Add a sitting by hand") }
+            }
+        }
+        added?.let { Text(it, Modifier.padding(top = 4.dp)) }
+        if (adding) {
+            AddSitting(settings.totalMin) {
+                adding = false
+                if (it != null) added = it
+            }
         }
 
         Spacer(Modifier.height(32.dp))
@@ -278,7 +290,7 @@ private fun Setup(resumed: Int, onStarted: () -> Unit) {
 }
 
 @Composable
-private fun Stepper(label: String, value: String, onMinus: () -> Unit, onPlus: () -> Unit) {
+internal fun Stepper(label: String, value: String, onMinus: () -> Unit, onPlus: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(label, Modifier.weight(1f))
         OutlinedButton(onClick = onMinus) { Text("−") }
@@ -312,14 +324,14 @@ private fun BellPicker(bell: Bell, onPick: (Bell) -> Unit, onListen: (Bell) -> U
 }
 
 /** One minute at a time below 10 minutes, so a short test sitting can be set; five above. */
-private fun step(min: Int, dir: Int): Int = when {
+internal fun step(min: Int, dir: Int): Int = when {
     dir > 0 && min < 10 -> min + 1
     dir < 0 && min <= 10 -> min - 1
     dir > 0 -> (min / 5 + 1) * 5
     else -> (min - 1) / 5 * 5
 }
 
-private fun duration(min: Int) = when {
+internal fun duration(min: Int) = when {
     min < 60 -> "$min min"
     min % 60 == 0 -> "${min / 60} h"
     else -> "${min / 60} h ${min % 60} min"

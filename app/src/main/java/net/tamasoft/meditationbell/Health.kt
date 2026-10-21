@@ -29,8 +29,11 @@ object Health {
     suspend fun allowed(c: Context): Boolean =
         available(c) && WRITE in HealthConnectClient.getOrCreate(c).permissionController.getGrantedPermissions()
 
-    /** True if saved, or too short to save. False means: try again later. */
-    suspend fun save(c: Context, start: Instant, end: Instant): Boolean {
+    /**
+     * True if saved, or too short to save. False means: try again later.
+     * [manual] marks a sitting Jan entered by hand, not one the timer recorded.
+     */
+    suspend fun save(c: Context, start: Instant, end: Instant, manual: Boolean = false): Boolean {
         if (end.epochSecond - start.epochSecond < MIN_SECONDS) return true
         if (!allowed(c)) return false
         val zone = ZoneId.systemDefault().rules
@@ -38,7 +41,8 @@ object Health {
             start, zone.getOffset(start),
             end, zone.getOffset(end),
             // The start time names the sitting, so saving it twice updates it instead of duplicating it.
-            Metadata.activelyRecorded(
+            if (manual) Metadata.manualEntry("manual-${start.toEpochMilli()}", 1L)
+            else Metadata.activelyRecorded(
                 Device(Device.TYPE_PHONE, Build.MANUFACTURER, Build.MODEL),
                 "sitting-${start.toEpochMilli()}", 1L,
             ),
@@ -54,14 +58,16 @@ object Health {
         }
     }
 
-    /** Saves a sitting now, or keeps it to retry. */
-    suspend fun saveOrQueue(c: Context, start: Instant, end: Instant) {
-        if (!save(c, start, end)) Sitting.queue(c, start, end)
+    /** Saves a sitting now, or keeps it to retry. True if it was saved now. */
+    suspend fun saveOrQueue(c: Context, start: Instant, end: Instant, manual: Boolean = false): Boolean {
+        if (save(c, start, end, manual)) return true
+        Sitting.queue(c, Unsaved(start, end, manual))
+        return false
     }
 
     /** Retries every sitting that could not be saved before. */
     suspend fun retry(c: Context) {
-        val done = Sitting.unsaved(c).filter { (a, b) -> save(c, a, b) }
+        val done = Sitting.unsaved(c).filter { save(c, it.start, it.end, it.manual) }
         if (done.isNotEmpty()) Sitting.clearUnsaved(c, done)
     }
 }

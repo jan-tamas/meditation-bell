@@ -21,13 +21,17 @@ Health Connect. The design is in Jan's vault:
 - Each sitting is saved to Health Connect as one meditation session (start
   and end; nothing is read). Ending early saves the real end. A sitting
   Health Connect refuses is kept and retried when the app is next opened.
+- A sitting sat without the bell (on a plane, say) can be added by hand: the
+  day, the start time in the phone's time zone, and the length. It is saved
+  to Health Connect marked as entered by hand, and is refused if it would end
+  in the future. A mistaken entry is deleted in Health Connect itself.
 
 ## Building
 
 GitHub Actions builds it (`.github/workflows/build.yml`): a test copy on every
 push to `main`, and a signed release on a tag like `v0.1`, which is what
 Obtainium installs. Locally: `gradle assembleDebug` with JDK 17 and the
-Android SDK. The timing (`Clock.kt`) has unit tests, run on every build.
+Android SDK. The timing (`Clock.kt`) and the hand-entered sittings (`Past.kt`) have unit tests, run on every build.
 
 ## Bells
 

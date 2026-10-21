@@ -206,21 +206,18 @@ object Sitting {
     // ------------------------------------------- sittings Health Connect refused
 
     /** A sitting that could not be saved yet, kept to retry when the app is next opened. */
-    fun queue(c: Context, start: Instant, end: Instant) {
+    fun queue(c: Context, u: Unsaved) {
         val p = prefs(c)
         val q = p.getStringSet("unsaved", emptySet())!!.toMutableSet()
-        q.add("${start.toEpochMilli()}-${end.toEpochMilli()}")
+        q.add(u.key)
         p.edit().putStringSet("unsaved", q).commit()
     }
 
-    fun unsaved(c: Context): List<Pair<Instant, Instant>> =
-        prefs(c).getStringSet("unsaved", emptySet())!!.mapNotNull {
-            val (a, b) = it.split("-").map(String::toLongOrNull)
-            if (a == null || b == null) null else Instant.ofEpochMilli(a) to Instant.ofEpochMilli(b)
-        }
+    fun unsaved(c: Context): List<Unsaved> =
+        prefs(c).getStringSet("unsaved", emptySet())!!.mapNotNull(Unsaved::of)
 
-    fun clearUnsaved(c: Context, done: Collection<Pair<Instant, Instant>>) {
-        val keys = done.map { "${it.first.toEpochMilli()}-${it.second.toEpochMilli()}" }.toSet()
+    fun clearUnsaved(c: Context, done: Collection<Unsaved>) {
+        val keys = done.map { it.key }.toSet()
         val p = prefs(c)
         val q = p.getStringSet("unsaved", emptySet())!!.toMutableSet()
         q.removeAll(keys)
