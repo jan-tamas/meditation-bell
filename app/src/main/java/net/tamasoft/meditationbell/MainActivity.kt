@@ -148,6 +148,7 @@ private fun Running(s: Session, now: Long, onChanged: () -> Unit) {
                 Text("bell at " + format.format(Date(c.intervalAt)), Modifier.padding(top = 4.dp))
             }
         }
+        VolumeLabel(Modifier.padding(top = 16.dp))
         Spacer(Modifier.height(48.dp))
         if (c.paused) {
             Button(onClick = {
@@ -272,7 +273,9 @@ private fun Setup(resumed: Int, onStarted: () -> Unit) {
             }
         }
 
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(24.dp))
+        VolumeLabel(Modifier.align(Alignment.CenterHorizontally))
+        Spacer(Modifier.height(12.dp))
         Button(
             onClick = {
                 preview?.release()
