@@ -3,6 +3,7 @@ package net.tamasoft.meditationbell
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.os.Build
 import android.os.Bundle
@@ -64,6 +65,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // The volume buttons set the alarm volume here, the one the bells ring at
+        // and the label shows; left alone they would set the media volume.
+        volumeControlStream = AudioManager.STREAM_ALARM
         setContent { BellTheme { Screen(resumed) } }
     }
 
@@ -212,14 +216,14 @@ private fun Setup(resumed: Int, onStarted: () -> Unit) {
         healthAllowed = Health.allowed(context)
     }
 
-    // Bell preview, through the media volume.
+    // Bell preview, at the alarm volume, so it sounds as loud as the bell will.
     var preview by remember { mutableStateOf<MediaPlayer?>(null) }
     DisposableEffect(Unit) { onDispose { preview?.release() } }
     fun listen(bell: Bell) {
         val playing = preview
         preview = null
         playing?.release()
-        if (playing == null) preview = playBell(context, bell, asAlarm = false) { preview = null }
+        if (playing == null) preview = playBell(context, bell, asAlarm = true) { preview = null }
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {

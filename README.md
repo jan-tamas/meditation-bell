@@ -10,8 +10,9 @@ Health Connect. The design is in Jan's vault:
   medium bowl at 45 minutes), a closing bell (default the large bowl), and Do
   Not Disturb while sitting (on by default, can be switched off).
 - The alarm volume the bells ring at is shown as "Volume: 0-100" above
-  Begin and while sitting, following the volume buttons; below 20 the label
-  is highlighted, so a bell too quiet to hear is caught before the sitting.
+  Begin and while sitting; below 20 the label is highlighted, so a bell too
+  quiet to hear is caught before the sitting. In the app the volume buttons
+  set the alarm volume, and "Listen" plays at it, so all three agree.
 - No bell at the start, and nothing shown at the end: no count, no total.
 - Pause, then resume or end. Paused time does not count: the bells still to
   come move later by the length of the pause, and no bell rings on resume. Do
